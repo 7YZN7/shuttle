@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Graphics;
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -51,6 +51,103 @@ namespace MauiApp1
             await ConnectToServer(serverIP, port);
         }
 
+        private async void OnFindServerClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                StatusLabel.Text = "Scanning local network...";
+                StatusLabel.TextColor = Colors.Orange;
+
+                if (!int.TryParse(ServerPortEntry.Text?.Trim(), out int port))
+                {
+                    await DisplayAlert("Error", "Please enter a valid port before scanning.", "OK");
+                    return;
+                }
+
+                string localIp = GetLocalIPAddress();
+                if (string.IsNullOrWhiteSpace(localIp) || !IPAddress.TryParse(localIp, out var ip))
+                {
+                    await DisplayAlert("Error", "Could not determine local IP.", "OK");
+                    return;
+                }
+
+                string subnet = string.Join('.', localIp.Split('.').Take(3));
+                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                string? found = await FindServerOnSubnetAsync(subnet, port, cts.Token);
+
+                if (found != null)
+                {
+                    ServerIpEntry.Text = found;
+                    StatusLabel.Text = $"Found server at {found}:{port}";
+                    StatusLabel.TextColor = Colors.Green;
+                    await ConnectToServer(found, port);
+                }
+                else
+                {
+                    StatusLabel.Text = "No server found";
+                    StatusLabel.TextColor = Colors.Red;
+                    await DisplayAlert("Not Found", "No server was found on your local /24 subnet.", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusLabel.Text = $"Scan error: {ex.Message}";
+                StatusLabel.TextColor = Colors.Red;
+            }
+        }
+
+        private async Task<string?> FindServerOnSubnetAsync(string subnetPrefix, int port, CancellationToken cancellationToken)
+        {
+            // Example: subnetPrefix = "192.168.1"
+            var ipCandidates = Enumerable.Range(1, 254).Select(last => $"{subnetPrefix}.{last}").ToList();
+
+            var throttler = new SemaphoreSlim(32);
+            var tasks = new List<Task<(string ip, bool ok)>>();
+
+            foreach (var candidate in ipCandidates)
+            {
+                await throttler.WaitAsync(cancellationToken);
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var tcp = new TcpClient();
+                        tcp.NoDelay = true;
+                        var connectTask = tcp.ConnectAsync(IPAddress.Parse(candidate), port);
+                        var completed = await Task.WhenAny(connectTask, Task.Delay(300, cancellationToken));
+                        if (completed == connectTask && tcp.Connected)
+                        {
+                            return (candidate, true);
+                        }
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                    finally
+                    {
+                        throttler.Release();
+                    }
+                    return (candidate, false);
+                }, cancellationToken));
+            }
+
+            while (tasks.Count > 0)
+            {
+                var finished = await Task.WhenAny(tasks);
+                tasks.Remove(finished);
+                var (ip, ok) = await finished;
+                if (ok)
+                {
+                    // Cancel remaining tasks
+                    try { (cancellationToken as CancellationTokenSource)?.Cancel(); } catch { }
+                    return ip;
+                }
+            }
+
+            return null;
+        }
+
         private async Task ConnectToServer(string serverIP, int port)
         {
             try
@@ -59,20 +156,20 @@ namespace MauiApp1
                 StatusLabel.TextColor = Colors.Orange;
                 AddMessage($"🔄 Connecting to {serverIP}:{port}...");
 
-                // Validate IP address format first
                 if (!IPAddress.TryParse(serverIP, out IPAddress? ipAddress))
                 {
                     throw new ArgumentException("Invalid IP address format");
                 }
 
                 _client = new TcpClient();
+                _client.NoDelay = true;
+                _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                 _clientCts = new CancellationTokenSource();
 
-                // Set longer timeout for connection
-                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _clientCts.Token);
 
-                // Use the parsed IP address directly to avoid DNS resolution
-                await _client.ConnectAsync(ipAddress, port, timeoutCts.Token);
+                await _client.ConnectAsync(ipAddress, port, linked.Token);
 
                 _stream = _client.GetStream();
                 _isConnected = true;
@@ -80,7 +177,6 @@ namespace MauiApp1
                 StatusLabel.Text = $"Connected to {serverIP}:{port}";
                 StatusLabel.TextColor = Colors.Green;
 
-                // Update UI
                 ConnectButton.Text = "Disconnect";
                 ConnectButton.BackgroundColor = Colors.Red;
                 SendButton.IsEnabled = true;
@@ -88,10 +184,8 @@ namespace MauiApp1
 
                 AddMessage($"✅ Connected to server {serverIP}:{port}");
 
-                // Send initial hello message
                 await SendMessage("Hello from MAUI client!");
 
-                // Start listening for messages from server
                 _ = Task.Run(async () => await ListenForMessages(_clientCts.Token));
 
                 await DisplayAlert("Connected", $"Successfully connected to server at {serverIP}:{port}", "OK");
