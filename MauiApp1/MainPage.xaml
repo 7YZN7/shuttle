@@ -1,0 +1,178 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MauiApp1.MainPage"
+    Title="WiFi File Transfer">
+    <ScrollView>
+            <StackLayout Padding="20" Spacing="15">
+
+                <!-- Header -->
+                <Label Text="💻 TCP Client App" 
+                   FontSize="28" 
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" 
+                   TextColor="DarkBlue"
+                   Margin="0,0,0,20"/>
+
+                <!-- Client Information -->
+                <Frame BackgroundColor="LightCyan" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   HasShadow="True">
+                    <StackLayout>
+                        <Label Text="Client Information" 
+                           FontAttributes="Bold" 
+                           FontSize="18"
+                           TextColor="DarkCyan"/>
+
+                        <Label x:Name="LocalIpLabel" 
+                           Text="This device IP: Loading..." 
+                           FontSize="14"
+                           TextColor="DarkCyan"
+                           Margin="0,10,0,0"/>
+                    </StackLayout>
+                </Frame>
+
+                <!-- Server Connection Settings -->
+                <Frame BackgroundColor="LightSteelBlue" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   HasShadow="True">
+                    <StackLayout>
+                        <Label Text="Server Connection" 
+                           FontAttributes="Bold" 
+                           FontSize="18"
+                           TextColor="DarkSlateBlue"/>
+
+                        <Label Text="Server IP Address:" 
+                           FontAttributes="Bold" 
+                           Margin="0,10,0,5"/>
+                        <Entry x:Name="ServerIpEntry" 
+                           Placeholder="192.168.1.100" 
+                           Keyboard="Numeric"
+                           BackgroundColor="White"/>
+
+                        <Label Text="Server Port:" 
+                           FontAttributes="Bold" 
+                           Margin="0,10,0,5"/>
+                        <Entry x:Name="ServerPortEntry" 
+                           Placeholder="8080" 
+                           Keyboard="Numeric"
+                           BackgroundColor="White"/>
+
+                        <Button x:Name="ConnectButton" 
+                            Text="Connect" 
+                            Clicked="OnConnectClicked" 
+                            BackgroundColor="Green" 
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            HeightRequest="50"
+                            CornerRadius="25"
+                            Margin="0,15,0,0"/>
+
+                        <Label x:Name="StatusLabel" 
+                           Text="Ready to connect" 
+                           FontAttributes="Bold" 
+                           HorizontalOptions="Center"
+                           TextColor="DarkSlateBlue"
+                           Margin="0,10,0,0"/>
+                    </StackLayout>
+                </Frame>
+
+                <!-- Message Sending Section -->
+                <Frame BackgroundColor="LightGreen" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   HasShadow="True">
+                    <StackLayout>
+                        <Label Text="💬 Send Messages" 
+                           FontAttributes="Bold" 
+                           FontSize="18"
+                           TextColor="DarkGreen"/>
+
+                        <Entry x:Name="MessageEntry" 
+                           Placeholder="Type your message here..." 
+                           IsEnabled="False"
+                           BackgroundColor="White"
+                           Margin="0,10,0,0"/>
+
+                        <Button x:Name="SendButton" 
+                            Text="Send Message" 
+                            Clicked="OnSendMessageClicked" 
+                            BackgroundColor="Blue" 
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            IsEnabled="False"
+                            HeightRequest="45"
+                            CornerRadius="20"
+                            Margin="0,10,0,0"/>
+                    </StackLayout>
+                </Frame>
+
+                <!-- Connection Instructions -->
+                <Frame BackgroundColor="LightYellow" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   HasShadow="True">
+                    <StackLayout>
+                        <Label Text="📋 How to Connect" 
+                           FontAttributes="Bold" 
+                           FontSize="16"
+                           TextColor="DarkGoldenrod"/>
+
+                        <Label TextColor="DarkGoldenrod" Margin="0,10,0,0">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="1. Make sure the server phone is running&#x0a;"/>
+                                    <Span Text="2. Get the server's IP address from the server app&#x0a;"/>
+                                    <Span Text="3. Enter the IP and port above&#x0a;"/>
+                                    <Span Text="4. Tap Connect&#x0a;"/>
+                                    <Span Text="5. Start sending messages!"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </StackLayout>
+                </Frame>
+
+                <!-- Message History -->
+                <Frame BackgroundColor="LightGray" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   HasShadow="True">
+                    <StackLayout>
+                        <Label Text="📨 Message History" 
+                           FontAttributes="Bold" 
+                           FontSize="16"
+                           TextColor="DarkSlateGray"/>
+
+                        <CollectionView x:Name="MessagesCollectionView" 
+                                   HeightRequest="200"
+                                   BackgroundColor="White"
+                                   Margin="0,10,0,0">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="10,5">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Label Text="{Binding .}" 
+                                           FontSize="12" 
+                                           TextColor="Black"
+                                           LineBreakMode="WordWrap"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Label Text="💡 Latest messages appear at the top" 
+                           FontSize="10" 
+                           TextColor="Gray"
+                           HorizontalOptions="Center"
+                           Margin="0,5,0,0"/>
+                    </StackLayout>
+                </Frame>
+
+            </StackLayout>
+        </ScrollView>
+
+    </ContentPage>
